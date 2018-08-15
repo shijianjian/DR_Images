@@ -22,10 +22,7 @@ class TFRecordsUtils():
     def _set_feature(self, image, label):
         return {
             self.LABEL_FEATURE_NAME: self._int64_feature([label]),
-            self.IMAGE_FEATURE_NAME: self._bytes_feature(
-                    # Note the square brackets here, to be a 1D list
-                        [tf.compat.as_bytes(image.tostring())]
-                    )
+            self.IMAGE_FEATURE_NAME: self._bytes_feature([image])
         }
     
     def _get_feature(self):
@@ -46,7 +43,7 @@ class TFRecordsUtils():
         # Image processing
         image_shape = tf.stack([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
         # has to be uint8 type
-        image_raw = tf.decode_raw(_image_raw, tf.uint8)
+        image_raw = tf.image.decode_jpeg(_image_raw)
         image = tf.reshape(image_raw, image_shape)
         # Important, since we do not know the image shape information, it is all encoded in Tensorflow.
         # Hence, it can hardly pass the shape check in your Tensorflow Neural Network.

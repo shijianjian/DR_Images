@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import tensorflow as tf
 
 class ImageUtils():
 
@@ -41,3 +42,9 @@ class ImageUtils():
         # plt.bar(range(hist_along_axis.shape[0]), hist_along_axis)
         idx_x = np.argwhere(hist_along_axis > threshold)
         return (idx_x[0][0], idx_x[-1][0])
+
+    def compress_image(self, sess, img):
+        return sess.run(tf.image.encode_jpeg(img, quality=100))
+
+    def decode_image(self, sess, cpresd_img):
+        return sess.run(tf.image.decode_image(cpresd_img))
