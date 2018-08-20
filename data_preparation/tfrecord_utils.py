@@ -100,8 +100,8 @@ class TFRecordsUtils():
                     ))
                     writer.write(example.SerializeToString())
                     print('\r{:.1%}'.format((i+1)/len(images)), end='')
-
-
+    
+    
 if __name__ == '__main__':
 
     images, labels = TFRecordsUtils().read_TFRecords('../data.tfrecords')

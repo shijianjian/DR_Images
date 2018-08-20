@@ -43,8 +43,14 @@ class ImageUtils():
         idx_x = np.argwhere(hist_along_axis > threshold)
         return (idx_x[0][0], idx_x[-1][0])
 
-    def compress_image(self, sess, img):
-        return sess.run(tf.image.encode_jpeg(img, quality=100))
+    def compress_image(self, img):
+        with tf.Session() as sess:
+            res = sess.run(tf.image.encode_jpeg(img, quality=100))
+        tf.contrib.keras.backend.clear_session()
+        return res
 
-    def decode_image(self, sess, cpresd_img):
-        return sess.run(tf.image.decode_image(cpresd_img))
+    def decode_image(self, cpresd_img):
+        with tf.Session() as sess:
+            res = sess.run(tf.image.decode_image(cpresd_img))
+        tf.contrib.keras.backend.clear_session()
+        return res
