@@ -108,4 +108,7 @@ if __name__ == '__main__':
     # # Presume they are in the same order
     # TFRecordsUtils().to_TFRecords(imgs_dict.values(), labels_dict.values())
 
-    transfer_to_tfrecords('data/images', 'data/labels', trunk_size=100)
+    prefix = 'data/sample'
+    image_path = os.path.join(prefix, 'images')
+    label_path = os.path.join(prefix, 'labels')
+    transfer_to_tfrecords(image_path, label_path, trunk_size=100)
