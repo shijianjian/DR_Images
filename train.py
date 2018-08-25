@@ -233,7 +233,13 @@ class Trainer():
                     save_to_dir=None,
                     interpolation=None
                     )
-
+                init_op = tf.group(
+                    tf.global_variables_initializer(),
+                    # if we have 'num_epochs' in filename_queue
+                    tf.local_variables_initializer()
+                )
+                # Bug fix for GPU mode
+                K.backend.get_session().run(tf.initialize_all_variables())
                 model.fit_generator(
                     training_gen,
                     epochs=num_epochs,
