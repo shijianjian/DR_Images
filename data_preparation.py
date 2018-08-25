@@ -37,6 +37,32 @@ def read_labels(path):
                 print('\n')
     return labels
 
+def to_keras_generator_folder_structure(images_path, labels_path):
+    labels = read_labels(labels_path)
+
+    import os
+    import shutil
+
+    images_path = os.path.abspath(images_path)
+
+    out_path = os.path.abspath(images_path + "_processed")
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+
+    for _, _, files in os.walk(images_path):
+        for i, f in enumerate(files):
+
+            value = str(labels[f[:f.rfind('.')]])
+            if not os.path.exists(os.path.join(out_path, value)):
+                os.makedirs(os.path.join(out_path, value))
+            
+            # shutil.move(os.path.join(images_path, f), os.path.join(images_path, value, f))
+            img = cv2.imread(os.path.join(images_path, f))
+            img = image_utils.auto_crop_and_resize(img, resize_dims=(3000, 3000))
+            cv2.imwrite(os.path.join(out_path, value, f), img)
+
+            print('\r{:.1%}'.format((i+1)/len(files)), end='')
+
 
 image_utils = ImageUtils()
 tf_records_utils = TFRecordsUtils()
@@ -102,13 +128,32 @@ def transfer_to_tfrecords(image_path, label_path, start_from=0, trunk_size=100):
 
 
 if __name__ == '__main__':
-    import numpy as np
-    # imgs_dict = read_images('data/images', ImageUtils().auto_crop_and_resize, (3000, 3000))
-    # labels_dict = read_labels('data/labels')
-    # # Presume they are in the same order
-    # TFRecordsUtils().to_TFRecords(imgs_dict.values(), labels_dict.values())
 
-    prefix = 'data/sample'
-    image_path = os.path.join(prefix, 'images')
-    label_path = os.path.join(prefix, 'labels')
-    transfer_to_tfrecords(image_path, label_path, trunk_size=100)
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--tfrecord', action='store_true')
+    parser.add_argument('--keras', action='store_true')
+
+    args = parser.parse_args()
+
+    USING_KERAS = args.keras
+    USING_TFRECORD = args.tfrecord
+
+    if USING_KERAS and USING_TFRECORD:
+        raise ValueError("Flag --keras and --tfrecord can't be both true. Using only one instead.")
+
+    if USING_TFRECORD:
+        import numpy as np
+        # imgs_dict = read_images('data/images', ImageUtils().auto_crop_and_resize, (3000, 3000))
+        # labels_dict = read_labels('data/labels')
+        # # Presume they are in the same order
+        # TFRecordsUtils().to_TFRecords(imgs_dict.values(), labels_dict.values())
+
+        prefix = 'data/sample'
+        image_path = os.path.join(prefix, 'images')
+        label_path = os.path.join(prefix, 'labels')
+        transfer_to_tfrecords(image_path, label_path, trunk_size=100)
+    elif USING_KERAS:
+        to_keras_generator_folder_structure('data/images', 'data/labels')
+
