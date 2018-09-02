@@ -16,10 +16,13 @@ Please KEEP the folder structure like it is.
 - Put your new data into /data/images 
 - Put the labels into /data/labels
 
-#### Convert to TFRecords
+#### Image preprocessing and convert to Keras data generator usable data structure
 Simple run
 ```bash
-python data_preparation.py
+python data_preparation.py --keras --path ./data --resize "(256, 256)"
 ```
 
-TODO: add train/test separation later on.
+### Training
+~~~bash
+python trainer.py
+~~~

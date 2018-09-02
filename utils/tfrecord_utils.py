@@ -9,6 +9,7 @@ class TFRecordsUtils():
         return tf.train.Feature(
                 int64_list=tf.train.Int64List(value=value)
             )
+    
     def _floats_feature(self, value):
         return tf.train.Feature(
                 float_list=tf.train.FloatList(value=value)

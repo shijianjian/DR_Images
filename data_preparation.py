@@ -2,8 +2,10 @@ import cv2
 import pandas as pd
 import os
 import tensorflow as tf
-from data_preparation.image_utils import ImageUtils
-from data_preparation.tfrecord_utils import TFRecordsUtils
+from utils.image_utils import ImageUtils
+from utils.tfrecord_utils import TFRecordsUtils
+
+RESIZE_DIMS=(512, 512)
 
 def read_images(path, convert_func, func_args):
     imgs = {}
@@ -17,7 +19,7 @@ def read_images(path, convert_func, func_args):
             if convert_func is not None:
                 # image conversion
                 img = convert_func(img, func_args)
-            imgs.update({f[:f.rfind('.')]: ImageUtils().compress_image(sess, img)})
+            imgs.update({f[:f.rfind('.')]: ImageUtils.compress_image(img)})
             print('\r{:.1%}'.format((i+1)/len(files)), end='')
     print('\n')
     sess.close()
@@ -41,7 +43,6 @@ def to_keras_generator_folder_structure(images_path, labels_path):
     labels = read_labels(labels_path)
 
     import os
-    import shutil
 
     images_path = os.path.abspath(images_path)
 
@@ -58,13 +59,14 @@ def to_keras_generator_folder_structure(images_path, labels_path):
             
             # shutil.move(os.path.join(images_path, f), os.path.join(images_path, value, f))
             img = cv2.imread(os.path.join(images_path, f))
-            img = image_utils.auto_crop_and_resize(img, resize_dims=(3000, 3000))
+            img = ImageUtils.auto_crop_and_resize(img, resize_dims=RESIZE_DIMS)
+            # Filpping the right eye image to the left representation
+            if value.endswith('right'):
+                img = ImageUtils.mirror_image(img)
             cv2.imwrite(os.path.join(out_path, value, f), img)
 
             print('\r{:.1%}'.format((i+1)/len(files)), end='')
 
-
-image_utils = ImageUtils()
 tf_records_utils = TFRecordsUtils()
 
 def find_related_files(path, start_from=0, trunk_size=100):
@@ -78,7 +80,7 @@ def streaming_images(files, convert_func, func_args):
         if convert_func is not None:
             # image conversion
             img = convert_func(img, func_args)
-        yield image_utils.compress_image(img), f[f.rfind('/') + 1:]
+        yield ImageUtils.compress_image(img), f[f.rfind('/') + 1:]
 
 def save_image(writer, image, label):
     example = tf.train.Example(
@@ -106,7 +108,7 @@ def transfer_to_tfrecords(image_path, label_path, start_from=0, trunk_size=100):
 
         files = find_related_files(image_path, start_from=trunk_num*trunk_size, trunk_size=trunk_size)
         
-        data = streaming_images(files, image_utils.auto_crop_and_resize, (3000, 3000))
+        data = streaming_images(files, ImageUtils.auto_crop_and_resize, RESIZE_DIMS)
         output_file_path = 'data_%d.tfrecords' % trunk_num
 
         writer = tf.python_io.TFRecordWriter(output_file_path)
@@ -131,7 +133,9 @@ if __name__ == '__main__':
 
     import argparse
 
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path", help="Path to the data", required=True)
+    parser.add_argument("--resize", help="Resize the images to a specific size, default is %s" % str(RESIZE_DIMS))
     parser.add_argument('--tfrecord', action='store_true')
     parser.add_argument('--keras', action='store_true')
 
@@ -139,9 +143,25 @@ if __name__ == '__main__':
 
     USING_KERAS = args.keras
     USING_TFRECORD = args.tfrecord
+    PATH = args.path
 
-    if USING_KERAS and USING_TFRECORD:
-        raise ValueError("Flag --keras and --tfrecord can't be both true. Using only one instead.")
+    image_path = os.path.join(PATH, 'images')
+    label_path = os.path.join(PATH, 'labels')
+    if not os.path.isdir(image_path):
+        raise ValueError("Image directory %s does not exist" % image_path)
+    else:
+        print("Image directory '%s' found" % image_path)
+    if not os.path.isdir(label_path):
+        raise ValueError("Label directory %s does not exist" % label_path)
+    else:
+        print("Label directory '%s' found" % label_path)
+
+    if args.resize is not None:
+        RESIZE_DIMS = eval(args.resize)
+    print("Images will be resized to %s" % RESIZE_DIMS)
+    
+    if (USING_KERAS and USING_TFRECORD) or (not USING_KERAS and not USING_TFRECORD):
+        raise ValueError("Flag --keras and --tfrecord can't be both true or false. Using only one instead.")
 
     if USING_TFRECORD:
         import numpy as np
@@ -150,10 +170,7 @@ if __name__ == '__main__':
         # # Presume they are in the same order
         # TFRecordsUtils().to_TFRecords(imgs_dict.values(), labels_dict.values())
 
-        prefix = 'data/sample'
-        image_path = os.path.join(prefix, 'images')
-        label_path = os.path.join(prefix, 'labels')
         transfer_to_tfrecords(image_path, label_path, trunk_size=100)
     elif USING_KERAS:
-        to_keras_generator_folder_structure('data/images', 'data/labels')
+        to_keras_generator_folder_structure(image_path, label_path)
 
